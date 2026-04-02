@@ -2,7 +2,7 @@ import fastf1
 import pandas as pd
 import os
 
-# enable FastF1 caching
+# enable FastF1 cache
 fastf1.Cache.enable_cache("data/raw")
 
 
@@ -10,6 +10,9 @@ def load_race_results(year, race_name):
     """
     Load race results for a given race.
     """
+
+    print(f"Downloading {year} {race_name}")
+
     session = fastf1.get_session(year, race_name, 'R')
     session.load()
 
@@ -30,33 +33,55 @@ def load_race_results(year, race_name):
 
 def save_race_results(year, race_name):
     """
-    Save race results to CSV.
+    Save race results to CSV
     """
+
+    os.makedirs("data/raw", exist_ok=True)
+
     df = load_race_results(year, race_name)
 
-    file_path = f"data/raw/{year}_{race_name}_results.csv"
+    race_clean = race_name.replace(" ", "_")
+
+    file_path = f"data/raw/{year}_{race_clean}_results.csv"
+
     df.to_csv(file_path, index=False)
 
     print(f"Saved {file_path}")
 
 
+def download_season(year):
+    """
+    Download all races for a given year automatically.
+    """
+
+    print(f"\nDownloading season {year}")
+
+    schedule = fastf1.get_event_schedule(year)
+
+    races = schedule[schedule['EventFormat'] == 'conventional']
+
+    for _, race in races.iterrows():
+
+        race_name = race['EventName']
+
+        try:
+            save_race_results(year, race_name)
+
+        except Exception as e:
+            print(f"Skipped {race_name} ({e})")
+
+
+def download_multiple_seasons(start_year, end_year):
+    """
+    Download multiple seasons.
+    """
+
+    for year in range(start_year, end_year + 1):
+
+        download_season(year)
+
+
 if __name__ == "__main__":
 
-    races = [
-        (2023, "Bahrain"),
-        (2023, "Saudi Arabian"),
-        (2023, "Australian"),
-        (2023, "Azerbaijan"),
-        (2023, "Miami"),
-        (2023, "Monaco"),
-        (2023, "Spanish"),
-        (2023, "Canadian"),
-        (2023, "British"),
-        (2023, "Hungarian"),
-        (2023, "Belgian"),
-        (2023, "Dutch"),
-        (2023, "Italian")
-    ]
-
-    for year, race in races:
-        save_race_results(year, race)
+    # Download historical seasons
+    download_multiple_seasons(2018, 2025)
